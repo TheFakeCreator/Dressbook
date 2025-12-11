@@ -12,12 +12,17 @@ import ConfirmationDialog from '@/components/ConfirmationDialog';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useToast } from '@/contexts/ToastContext';
 import { addToRecentlyViewed } from '@/lib/userActivity';
+import { LayerVisualization } from '@/components/outfits/LayerVisualization';
+import { ColorSchemeAnalyzer } from '@/components/outfits/ColorSchemeAnalyzer';
+import OutfitSuggestions from '@/components/outfits/OutfitSuggestions';
+import { extractSuggestionParams } from '@/lib/outfitSuggestions';
 
 interface OutfitItem {
   itemId: {
     _id: string;
     name: string;
     category: string;
+    color?: string;
     images?: { url: string; thumbnail?: string; isPrimary?: boolean }[];
   };
   layer: number;
@@ -281,6 +286,20 @@ export default function OutfitDetailPage() {
           </div>
         )}
 
+        {/* Layer Visualization */}
+        {outfit.items && outfit.items.length > 0 && (
+          <div className="mb-8">
+            <LayerVisualization items={outfit.items} />
+          </div>
+        )}
+
+        {/* Color Scheme Analysis */}
+        {outfit.items && outfit.items.length > 0 && (
+          <div className="mb-8">
+            <ColorSchemeAnalyzer items={outfit.items} />
+          </div>
+        )}
+
         {/* Items by Category */}
         <div className="space-y-8">
           {Object.entries(itemsByCategory).map(([category, items]) => (
@@ -417,6 +436,20 @@ export default function OutfitDetailPage() {
               </p>
             )}
           </Card>
+        )}
+
+        {/* Outfit Suggestions */}
+        {outfit.items && outfit.items.length > 0 && (
+          <div className="mt-8">
+            <OutfitSuggestions
+              currentOutfitId={outfit._id}
+              tags={outfit.tags || []}
+              colors={outfit.items
+                .map(item => item.itemId?.color)
+                .filter(Boolean) as string[]}
+              limit={5}
+            />
+          </div>
         )}
 
         {/* Empty State */}

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/Loading';
 import { addToRecentlyViewed } from '@/lib/userActivity';
+import OutfitSuggestions from '@/components/outfits/OutfitSuggestions';
 
 interface Character {
   _id: string;
@@ -244,6 +245,12 @@ export default function CharacterDetailPage() {
               <Button>View Character Timeline</Button>
             </Link>
           </div>
+
+          {/* Suggested Outfits */}
+          <OutfitSuggestions
+            characterId={characterId}
+            limit={5}
+          />
 
           {/* Metadata */}
           <div className="bg-white rounded-lg shadow-sm p-6">

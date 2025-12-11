@@ -28,15 +28,34 @@ interface SelectedItem {
 }
 
 const CATEGORIES = [
-  'Headwear',
-  'Top',
-  'Bottom',
-  'Outerwear',
-  'Footwear',
-  'Accessories',
+  'Head',
+  'Face',
+  'Neck',
+  'Torso Upper',
+  'Torso Lower',
   'Full Body',
-  'Undergarments',
+  'Hands',
+  'Feet',
+  'Legs',
+  'Back',
+  'Accessories',
 ];
+
+// Default layer numbers for each category (for proper stacking)
+// Lower numbers = closer to body, higher numbers = outer layers
+const CATEGORY_DEFAULT_LAYERS: Record<string, number> = {
+  'Full Body': 1,        // Base layer (replaces torso upper + lower)
+  'Torso Lower': 2,      // Pants, skirts
+  'Legs': 2,             // Leg wear (same level as torso lower)
+  'Torso Upper': 3,      // Shirts, tops
+  'Neck': 4,             // Scarves, necklaces (over tops)
+  'Back': 5,             // Backpacks, capes (outer layer)
+  'Hands': 5,            // Gloves, watches
+  'Feet': 5,             // Shoes, boots
+  'Face': 6,             // Glasses, masks
+  'Head': 7,             // Hats, crowns (top layer)
+  'Accessories': 6,      // General accessories (outer layer)
+};
 
 export default function NewOutfitPage() {
   const router = useRouter();
@@ -49,11 +68,16 @@ export default function NewOutfitPage() {
   const [error, setError] = useState<string | null>(null);
 
   const handleSelectItem = (item: ClothingItem) => {
-    // Determine the next layer number for this category
+    // Use default layer for category, or find the next available layer if multiple items in same category
     const categoryItems = selectedItems.filter(si => si.item.category === item.category);
-    const nextLayer = categoryItems.length > 0
-      ? Math.max(...categoryItems.map(si => si.layer)) + 1
-      : 1;
+    const baseLayer = CATEGORY_DEFAULT_LAYERS[item.category] || 5;
+    
+    let nextLayer = baseLayer;
+    if (categoryItems.length > 0) {
+      // If there are already items in this category, stack them
+      const maxLayer = Math.max(...categoryItems.map(si => si.layer));
+      nextLayer = maxLayer + 1;
+    }
 
     setSelectedItems(prev => [
       ...prev,
@@ -116,7 +140,7 @@ export default function NewOutfitPage() {
       }
 
       const data = await response.json();
-      router.push(`/outfits/${data.outfit._id}`);
+      router.push(`/outfits/${data.data._id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create outfit');
       setSaving(false);
