@@ -41,6 +41,7 @@ export interface ClothingItem {
   baseItemId?: string | ClothingItem | null;
   variationAttributes?: Record<string, string>;
   variations?: string[] | ClothingItem[];
+  variationCount?: number; // Number of variations this item has (calculated field)
   metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;

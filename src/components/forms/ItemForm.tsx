@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { ImageUpload } from '@/components/ui/ImageUpload';
+import { Tooltip } from '@/components/ui/Tooltip';
 import type { ClothingItem, ImageData } from '@/types';
 import { generateAIImagePrompt, generateSimplePrompt, formatPromptForDisplay, type PromptCustomization } from '@/lib/aiPromptGenerator';
 
@@ -35,6 +36,20 @@ export function ItemForm({ initialData, onSubmit, onCancel, isLoading }: ItemFor
   const [uploadingImage, setUploadingImage] = useState(false);
   const [availableItems, setAvailableItems] = useState<ClothingItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
+  
+  // Log initial data for debugging
+  useEffect(() => {
+    if (initialData) {
+      console.log('ItemForm initialized with data:', {
+        name: initialData.name,
+        parentItem: initialData.parentItem,
+        parentItemType: typeof initialData.parentItem,
+        parentItemId: typeof initialData.parentItem === 'string' 
+          ? initialData.parentItem 
+          : initialData.parentItem?._id,
+      });
+    }
+  }, [initialData]);
   
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
@@ -85,25 +100,28 @@ export function ItemForm({ initialData, onSubmit, onCancel, isLoading }: ItemFor
     const fetchItems = async () => {
       setLoadingItems(true);
       try {
-        const response = await fetch('/api/items?limit=1000');
+        const response = await fetch('/api/items?limit=1000&includeVariations=true');
         if (response.ok) {
-          const data = await response.json();
+          const result = await response.json();
+          const items = result.data || [];
           // Exclude the current item from the list if editing
           const filteredItems = initialData?._id 
-            ? data.items.filter((item: ClothingItem) => item._id !== initialData._id)
-            : data.items;
-          setAvailableItems(filteredItems || []);
+            ? items.filter((item: ClothingItem) => item._id !== initialData._id)
+            : items;
+          setAvailableItems(filteredItems);
           console.log('Available items for parent selector:', filteredItems.length);
+          console.log('Current formData.parentItemId:', formData.parentItemId);
         }
       } catch (error) {
         console.error('Failed to fetch items:', error);
+        setAvailableItems([]);
       } finally {
         setLoadingItems(false);
       }
     };
 
     fetchItems();
-  }, [initialData?._id]);
+  }, [initialData?._id, formData.parentItemId]);
 
   const handleImageUpload = async (file: File) => {
     setUploadingImage(true);
@@ -384,9 +402,14 @@ export function ItemForm({ initialData, onSubmit, onCancel, isLoading }: ItemFor
           </div>
 
           <div>
-            <label htmlFor="tags" className="block text-sm font-medium text-gray-900 mb-1">
-              Tags
-            </label>
+            <div className="flex items-center gap-2 mb-1">
+              <label htmlFor="tags" className="block text-sm font-medium text-gray-900">
+                Tags
+              </label>
+              <Tooltip content="Tags help organize and find items. Use descriptive keywords like 'formal', 'vintage', 'summer', etc.">
+                <span className="text-gray-400 hover:text-gray-600 cursor-help text-sm">ⓘ</span>
+              </Tooltip>
+            </div>
             <Input
               id="tags"
               name="tags"
@@ -489,9 +512,14 @@ export function ItemForm({ initialData, onSubmit, onCancel, isLoading }: ItemFor
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="historicalPeriod" className="block text-sm font-medium text-gray-900 mb-1">
-              Historical Period
-            </label>
+            <div className="flex items-center gap-2 mb-1">
+              <label htmlFor="historicalPeriod" className="block text-sm font-medium text-gray-900">
+                Historical Period
+              </label>
+              <Tooltip content="Specify when this clothing style was worn in real history. This helps establish authenticity and context for your wardrobe.">
+                <span className="text-gray-400 hover:text-gray-600 cursor-help text-sm">ⓘ</span>
+              </Tooltip>
+            </div>
             <Input
               id="historicalPeriod"
               name="historicalPeriod"
@@ -629,9 +657,14 @@ export function ItemForm({ initialData, onSubmit, onCancel, isLoading }: ItemFor
         <div className="space-y-4">
           {/* Parent Item Selector */}
           <div>
-            <label htmlFor="parentItemId" className="block text-sm font-medium text-gray-900 mb-1">
-              Parent Item (Optional)
-            </label>
+            <div className="flex items-center gap-2 mb-1">
+              <label htmlFor="parentItemId" className="block text-sm font-medium text-gray-900">
+                Parent Item (Optional)
+              </label>
+              <Tooltip content="Create variations by selecting a parent item. For example, 'Turtle Neck T-shirt' can be a variation of 'T-shirt'.">
+                <span className="text-gray-400 hover:text-gray-600 cursor-help text-sm">ⓘ</span>
+              </Tooltip>
+            </div>
             <select
               id="parentItemId"
               name="parentItemId"
@@ -960,7 +993,7 @@ export function ItemForm({ initialData, onSubmit, onCancel, isLoading }: ItemFor
             </div>
             <p className="text-xs text-gray-600 mt-2">
               💡 <strong>Tip:</strong> Copy this prompt and paste it into AI image generators like Midjourney, DALL-E, Stable Diffusion, 
-              or Leonardo.ai to create consistent reference images for this item. Then upload the generated image above.
+              or Leonardo.ai to create consistent reference images for this item. Then upload the generated image above. For best outcome use Nano banana Pro.
             </p>
           </div>
         )}

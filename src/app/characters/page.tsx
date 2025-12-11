@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { LoadingSkeleton } from '@/components/ui/Loading';
+import { CharacterGridSkeleton } from '@/components/LoadingSkeleton';
+import { NoCharactersFound } from '@/components/EmptyState';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface Character {
   _id: string;
@@ -137,46 +139,20 @@ export default function CharactersPage() {
         </div>
 
         {/* Loading State */}
-        {loading && (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i}>
-                <LoadingSkeleton className="h-48" />
-              </Card>
-            ))}
-          </div>
-        )}
+        {loading && <CharacterGridSkeleton count={6} />}
 
         {/* Error State */}
-        {error && (
-          <div className="rounded-lg bg-red-50 p-4 text-red-700">
-            {error}
-          </div>
+        {!loading && error && (
+          <ErrorDisplay
+            title="Failed to load characters"
+            message={error}
+            onRetry={fetchCharacters}
+          />
         )}
 
         {/* Empty State */}
         {!loading && !error && characters.length === 0 && (
-          <div className="rounded-lg bg-white p-12 text-center shadow-sm">
-            <div className="mx-auto h-24 w-24 text-gray-400">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-            </div>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No characters found</h3>
-            <p className="mt-2 text-gray-600">
-              {searchQuery ? 'Try adjusting your search' : 'Get started by adding your first character'}
-            </p>
-            {!searchQuery && (
-              <Link href="/characters/new">
-                <Button className="mt-4">Add Character</Button>
-              </Link>
-            )}
-          </div>
+          <NoCharactersFound />
         )}
 
         {/* Characters Grid */}

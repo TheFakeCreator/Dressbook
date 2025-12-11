@@ -6,7 +6,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { LoadingSkeleton } from '@/components/ui/Loading';
+import { DetailPageSkeleton } from '@/components/LoadingSkeleton';
+import ErrorDisplay from '@/components/ErrorDisplay';
+import ConfirmationDialog from '@/components/ConfirmationDialog';
+import { useConfirm } from '@/hooks/useConfirm';
+import { useToast } from '@/contexts/ToastContext';
+import { addToRecentlyViewed } from '@/lib/userActivity';
 
 interface OutfitItem {
   itemId: {
@@ -29,17 +34,36 @@ interface Outfit {
   updatedAt: string;
 }
 
+interface Character {
+  _id: string;
+  name: string;
+  role?: string;
+  description?: string;
+}
+
+interface TimelineEntry {
+  _id: string;
+  character: Character;
+  chapter?: string;
+  scene?: string;
+  date?: string;
+}
+
 export default function OutfitDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [outfit, setOutfit] = useState<Outfit | null>(null);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const { isOpen, confirmOptions, isLoading, confirm, handleConfirm, handleCancel, setLoading: setConfirmLoading } = useConfirm();
+  const toast = useToast();
 
   useEffect(() => {
     if (params.id) {
       fetchOutfit();
+      fetchCharactersAndTimeline();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
@@ -57,6 +81,16 @@ export default function OutfitDetailPage() {
 
       const data = await response.json();
       setOutfit(data.data);
+      
+      // Add to recently viewed
+      const firstItem = data.data.items?.[0];
+      const primaryImage = firstItem?.itemId?.images?.find((img: { isPrimary: boolean }) => img.isPrimary);
+      addToRecentlyViewed({
+        id: data.data._id,
+        type: 'outfit',
+        name: data.data.name,
+        thumbnail: primaryImage?.url || firstItem?.itemId?.images?.[0]?.url || null,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -64,12 +98,50 @@ export default function OutfitDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this outfit?')) {
-      return;
-    }
+  const fetchCharactersAndTimeline = async () => {
+    try {
+      // Fetch characters with this outfit as default
+      const charsResponse = await fetch('/api/characters');
+      if (charsResponse.ok) {
+        const charsData = await charsResponse.json();
+        if (charsData.success) {
+          const filtered = charsData.data.filter(
+            (char: Character & { defaultOutfit?: { _id: string } | string }) => {
+              const outfitId = typeof char.defaultOutfit === 'string' 
+                ? char.defaultOutfit 
+                : char.defaultOutfit?._id;
+              return outfitId === params.id;
+            }
+          );
+          setCharacters(filtered);
+        }
+      }
 
-    setDeleting(true);
+      // Fetch timeline entries with this outfit
+      const timelineResponse = await fetch(`/api/timeline?outfit=${params.id}`);
+      if (timelineResponse.ok) {
+        const timelineData = await timelineResponse.json();
+        if (timelineData.success) {
+          setTimelineEntries(timelineData.data);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch characters/timeline:', err);
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirmed = await confirm({
+      title: 'Delete Outfit',
+      message: 'Are you sure you want to delete this outfit? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'danger'
+    });
+
+    if (!confirmed) return;
+
+    setConfirmLoading(true);
     try {
       const response = await fetch(`/api/outfits/${params.id}`, {
         method: 'DELETE',
@@ -79,38 +151,72 @@ export default function OutfitDetailPage() {
         throw new Error('Failed to delete outfit');
       }
 
+      toast.success('Outfit deleted successfully');
       router.push('/outfits');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete outfit');
-      setDeleting(false);
+      toast.error(err instanceof Error ? err.message : 'Failed to delete outfit');
+      setConfirmLoading(false);
+    }
+  };
+
+  const handleDuplicate = async () => {
+    if (!outfit) return;
+
+    const confirmed = await confirm({
+      title: 'Duplicate Outfit',
+      message: `Create a copy of "${outfit.name}"? The duplicate will be opened for editing.`,
+      confirmLabel: 'Duplicate',
+      cancelLabel: 'Cancel',
+      variant: 'primary'
+    });
+
+    if (!confirmed) return;
+
+    setConfirmLoading(true);
+    try {
+      // Create a duplicate with "(Copy)" suffix
+      const duplicateData = {
+        name: `${outfit.name} (Copy)`,
+        description: outfit.description,
+        tags: outfit.tags,
+        items: outfit.items.map(item => ({
+          itemId: item.itemId._id,
+          layer: item.layer,
+          notes: item.notes
+        }))
+      };
+
+      const response = await fetch('/api/outfits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(duplicateData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to duplicate outfit');
+      }
+
+      const data = await response.json();
+      toast.success('Outfit duplicated successfully');
+      router.push(`/outfits/${data.data._id}/edit`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to duplicate outfit');
+      setConfirmLoading(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <LoadingSkeleton className="h-12 w-64 mb-4" />
-          <LoadingSkeleton className="h-96" />
-        </div>
-      </div>
-    );
+    return <DetailPageSkeleton />;
   }
 
   if (error || !outfit) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="rounded-lg bg-red-50 p-4 text-red-800">
-            <p>{error || 'Outfit not found'}</p>
-          </div>
-          <Link href="/outfits">
-            <Button variant="outline" className="mt-4">
-              Back to Outfits
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <ErrorDisplay
+        title={error ? 'Failed to load outfit' : 'Outfit not found'}
+        message={error || 'The outfit you are looking for does not exist.'}
+        onRetry={error ? fetchOutfit : undefined}
+        onGoBack={() => router.push('/outfits')}
+      />
     );
   }
 
@@ -146,11 +252,17 @@ export default function OutfitDetailPage() {
             </Link>
             <Button
               variant="outline"
+              onClick={handleDuplicate}
+              className="text-blue-600 hover:bg-blue-50"
+            >
+              Duplicate
+            </Button>
+            <Button
+              variant="outline"
               onClick={handleDelete}
-              disabled={deleting}
               className="text-red-600 hover:bg-red-50"
             >
-              {deleting ? 'Deleting...' : 'Delete'}
+              Delete
             </Button>
           </div>
         </div>
@@ -228,6 +340,85 @@ export default function OutfitDetailPage() {
           ))}
         </div>
 
+        {/* Characters Wearing This Outfit */}
+        {(characters.length > 0 || timelineEntries.length > 0) && (
+          <Card className="mt-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Worn By Characters
+            </h2>
+
+            {/* Default Outfit Characters */}
+            {characters.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Default Outfit For:</h3>
+                <div className="flex flex-wrap gap-3">
+                  {characters.map((character) => (
+                    <Link
+                      key={character._id}
+                      href={`/characters/${character._id}`}
+                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span className="font-medium text-gray-900">{character.name}</span>
+                      {character.role && (
+                        <span className="text-gray-500">• {character.role}</span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Timeline Appearances */}
+            {timelineEntries.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">
+                  Timeline Appearances ({timelineEntries.length}):
+                </h3>
+                <div className="space-y-2">
+                  {timelineEntries.slice(0, 5).map((entry) => (
+                    <Link
+                      key={entry._id}
+                      href={`/timeline?character=${entry.character._id}`}
+                      className="block rounded-lg border border-gray-200 bg-white px-4 py-3 hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span className="font-medium text-gray-900">{entry.character.name}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          {entry.chapter && <span>Ch. {entry.chapter}</span>}
+                          {entry.scene && <span>Scene {entry.scene}</span>}
+                          {entry.date && <span>{new Date(entry.date).toLocaleDateString()}</span>}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                  {timelineEntries.length > 5 && (
+                    <Link
+                      href={`/timeline?outfit=${outfit._id}`}
+                      className="block text-center py-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      View all {timelineEntries.length} appearances →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {characters.length === 0 && timelineEntries.length === 0 && (
+              <p className="text-sm text-gray-500">
+                This outfit hasn&apos;t been assigned to any characters yet.
+              </p>
+            )}
+          </Card>
+        )}
+
         {/* Empty State */}
         {outfit.items.length === 0 && (
           <Card>
@@ -260,6 +451,21 @@ export default function OutfitDetailPage() {
           </Card>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      {confirmOptions && (
+        <ConfirmationDialog
+          isOpen={isOpen}
+          title={confirmOptions.title}
+          message={confirmOptions.message}
+          confirmLabel={confirmOptions.confirmLabel}
+          cancelLabel={confirmOptions.cancelLabel}
+          confirmVariant={confirmOptions.variant}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+          isLoading={isLoading}
+        />
+      )}
     </div>
   );
 }

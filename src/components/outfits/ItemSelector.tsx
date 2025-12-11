@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Input } from '@/components/ui/Input';
 import { LoadingSpinner } from '@/components/ui/Loading';
+import { VariationSelector } from './VariationSelector';
 
 interface ClothingItem {
   _id: string;
@@ -17,6 +18,8 @@ interface ClothingItem {
   }>;
   tags: string[];
   colors: string[];
+  parentItem?: string | ClothingItem;
+  variationCount?: number;
 }
 
 interface ItemSelectorProps {
@@ -41,6 +44,7 @@ export function ItemSelector({ onSelectItem, selectedItemIds }: ItemSelectorProp
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchItems();
@@ -74,10 +78,10 @@ export function ItemSelector({ onSelectItem, selectedItemIds }: ItemSelectorProp
   const fetchItems = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/items?limit=100');
+      const response = await fetch('/api/items?limit=100&includeVariations=true');
       if (response.ok) {
         const data = await response.json();
-        setItems(data.items);
+        setItems(data.data || []);
       }
     } catch (error) {
       console.error('Error fetching items:', error);
@@ -157,23 +161,55 @@ export function ItemSelector({ onSelectItem, selectedItemIds }: ItemSelectorProp
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
+        <div className="space-y-4">
+          {/* Show expanded variation selector if an item is expanded */}
+          {expandedItemId && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-gray-900">Select Variation</h3>
+                <button
+                  onClick={() => setExpandedItemId(null)}
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Close
+                </button>
+              </div>
+              <VariationSelector
+                itemId={expandedItemId}
+                onSelectVariation={(item) => {
+                  onSelectItem(item);
+                  setExpandedItemId(null);
+                }}
+                selectedItemId={selectedItemIds.find(id => 
+                  filteredItems.find(i => i._id === expandedItemId)
+                )}
+              />
+            </div>
+          )}
+
+          {/* Items grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
           {filteredItems.map((item) => {
             const imageUrl = getPrimaryImage(item);
             const selected = isSelected(item._id);
+            const hasVariations = item.variationCount && item.variationCount > 0;
 
             return (
               <div
                 key={item._id}
-                onClick={() => !selected && onSelectItem(item)}
-                className={`relative border rounded-lg overflow-hidden cursor-pointer transition-all ${
+                className={`relative border rounded-lg overflow-hidden transition-all ${
                   selected
-                    ? 'ring-2 ring-blue-600 opacity-50 cursor-not-allowed'
-                    : 'hover:shadow-md hover:scale-105'
+                    ? 'ring-2 ring-blue-600 opacity-50'
+                    : 'hover:shadow-md'
                 }`}
               >
                 {/* Image */}
-                <div className="aspect-square bg-gray-100 relative">
+                <div 
+                  onClick={() => !selected && !hasVariations && onSelectItem(item)}
+                  className={`aspect-square bg-gray-100 relative ${
+                    !selected && !hasVariations ? 'cursor-pointer' : ''
+                  }`}
+                >
                   {imageUrl ? (
                     <Image
                       src={imageUrl}
@@ -192,6 +228,13 @@ export function ItemSelector({ onSelectItem, selectedItemIds }: ItemSelectorProp
                       <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
                         Selected
                       </div>
+                    </div>
+                  )}
+                  {hasVariations && !selected && (
+                    <div className="absolute top-2 right-2">
+                      <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                        {item.variationCount}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -217,10 +260,32 @@ export function ItemSelector({ onSelectItem, selectedItemIds }: ItemSelectorProp
                       ))}
                     </div>
                   )}
+                  
+                  {/* Action buttons */}
+                  {!selected && (
+                    <div className="mt-2 flex gap-1">
+                      {hasVariations ? (
+                        <button
+                          onClick={() => setExpandedItemId(item._id)}
+                          className="flex-1 py-1.5 px-2 text-xs font-medium rounded bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
+                        >
+                          Choose Variation
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onSelectItem(item)}
+                          className="flex-1 py-1.5 px-2 text-xs font-medium rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                        >
+                          Select
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
+        </div>
         </div>
       )}
     </div>

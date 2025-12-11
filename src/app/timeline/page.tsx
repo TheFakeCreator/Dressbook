@@ -5,7 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { LoadingSkeleton } from '@/components/ui/Loading';
+import { TimelineListSkeleton } from '@/components/LoadingSkeleton';
+import { NoTimelineEntries } from '@/components/EmptyState';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface TimelineEntry {
   _id: string;
@@ -205,48 +207,20 @@ export default function TimelinePage() {
         </div>
 
         {/* Loading State */}
-        {loading && (
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <Card key={i}>
-                <LoadingSkeleton className="h-32" />
-              </Card>
-            ))}
-          </div>
-        )}
+        {loading && <TimelineListSkeleton count={5} />}
 
         {/* Error State */}
-        {error && (
-          <div className="rounded-lg bg-red-50 p-4 text-red-700">
-            {error}
-          </div>
+        {!loading && error && (
+          <ErrorDisplay
+            title="Failed to load timeline"
+            message={error}
+            onRetry={fetchTimeline}
+          />
         )}
 
         {/* Empty State */}
         {!loading && !error && entries.length === 0 && (
-          <div className="rounded-lg bg-white p-12 text-center shadow-sm">
-            <div className="mx-auto h-24 w-24 text-gray-400">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No timeline entries found</h3>
-            <p className="mt-2 text-gray-600">
-              {characterFilter || chapterFilter
-                ? 'Try adjusting your filters'
-                : 'Start tracking character outfits by adding your first timeline entry'}
-            </p>
-            {!characterFilter && !chapterFilter && (
-              <Link href="/timeline/new">
-                <Button className="mt-4">Add Timeline Entry</Button>
-              </Link>
-            )}
-          </div>
+          <NoTimelineEntries />
         )}
 
         {/* Timeline Entries */}

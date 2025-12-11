@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const tag = searchParams.get('tag');
+    const sort = searchParams.get('sort') || 'newest';
+    const includeVariations = searchParams.get('includeVariations') === 'true';
+    const onlyBase = searchParams.get('onlyBase') === 'true';
 
     // Build query
     const query: Record<string, unknown> = {};
@@ -32,20 +35,64 @@ export async function GET(request: NextRequest) {
       query.$text = { $search: search };
     }
 
+    // Variation filtering
+    if (onlyBase) {
+      // Only show base items (items without a parent)
+      query.parentItem = { $exists: false };
+    } else if (!includeVariations) {
+      // Default behavior: exclude variations from results
+      query.parentItem = { $exists: false };
+    }
+    // If includeVariations is true, show everything (no filter)
+
+    // Build sort object
+    let sortObj: Record<string, 1 | -1> = { createdAt: -1 }; // Default: newest first
+    
+    switch (sort) {
+      case 'oldest':
+        sortObj = { createdAt: 1 };
+        break;
+      case 'name-asc':
+        sortObj = { name: 1 };
+        break;
+      case 'name-desc':
+        sortObj = { name: -1 };
+        break;
+      case 'category':
+        sortObj = { category: 1, name: 1 };
+        break;
+      case 'newest':
+      default:
+        sortObj = { createdAt: -1 };
+    }
+
     // Execute query with pagination
     const skip = (page - 1) * limit;
     const [items, total] = await Promise.all([
       ClothingItem.find(query)
-        .sort({ createdAt: -1 })
+        .sort(sortObj)
         .skip(skip)
         .limit(limit)
         .lean(),
       ClothingItem.countDocuments(query),
     ]);
 
+    // Add variation counts to items
+    const itemsWithVariationCounts = await Promise.all(
+      items.map(async (item) => {
+        const variationCount = await ClothingItem.countDocuments({
+          parentItem: item._id,
+        });
+        return {
+          ...item,
+          variationCount,
+        };
+      })
+    );
+
     return NextResponse.json({
       success: true,
-      data: items,
+      data: itemsWithVariationCounts,
       pagination: {
         page,
         limit,

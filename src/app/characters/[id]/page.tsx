@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/Loading';
+import { addToRecentlyViewed } from '@/lib/userActivity';
 
 interface Character {
   _id: string;
@@ -55,6 +56,13 @@ export default function CharacterDetailPage() {
       }
       const data = await response.json();
       setCharacter(data);
+      
+      // Add to recently viewed (characters don't typically have thumbnails)
+      addToRecentlyViewed({
+        id: data._id,
+        type: 'character',
+        name: data.name,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load character');
     } finally {

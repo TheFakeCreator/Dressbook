@@ -5,7 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { LoadingSkeleton } from '@/components/ui/Loading';
+import { OutfitGridSkeleton } from '@/components/LoadingSkeleton';
+import { NoOutfitsFound, NoSearchResults } from '@/components/EmptyState';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface Outfit {
   _id: string;
@@ -115,55 +117,29 @@ export default function OutfitsPage() {
         </div>
 
         {/* Loading State */}
-        {loading && (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i}>
-                <LoadingSkeleton className="h-48" />
-              </Card>
-            ))}
-          </div>
-        )}
+        {loading && <OutfitGridSkeleton count={6} />}
 
         {/* Error State */}
-        {error && !loading && (
-          <div className="rounded-lg bg-red-50 p-4 text-red-800">
-            <p>{error}</p>
-          </div>
+        {!loading && error && (
+          <ErrorDisplay
+            title="Failed to load outfits"
+            message={error}
+            onRetry={fetchOutfits}
+          />
         )}
 
         {/* Empty State */}
         {!loading && !error && outfits.length === 0 && (
-          <div className="rounded-lg bg-white p-12 text-center shadow-md">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-              <svg
-                className="h-8 w-8 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                />
-              </svg>
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">
-              {searchQuery ? 'No outfits found' : 'No outfits yet'}
-            </h3>
-            <p className="mb-4 text-gray-600">
-              {searchQuery
-                ? 'Try adjusting your search query'
-                : 'Create your first outfit to get started'}
-            </p>
-            {!searchQuery && (
-              <Link href="/outfits/new">
-                <Button>Create Your First Outfit</Button>
-              </Link>
+          <>
+            {searchQuery ? (
+              <NoSearchResults onClear={() => {
+                setSearchQuery('');
+                setPage(1);
+              }} />
+            ) : (
+              <NoOutfitsFound />
             )}
-          </div>
+          </>
         )}
 
         {/* Outfits Grid */}

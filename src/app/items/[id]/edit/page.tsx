@@ -30,13 +30,15 @@ export default function EditItemPage({ params }: { params: Promise<{ id: string 
     if (!resolvedParams?.id) return;
 
     try {
-      const response = await fetch(`/api/items/${resolvedParams.id}`);
+      const response = await fetch(`/api/items/${resolvedParams.id}?populateParent=true`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch item');
       }
 
       const data = await response.json();
+      console.log('Fetched item for editing:', data.data);
+      console.log('Parent item:', data.data.parentItem);
       setItem(data.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');

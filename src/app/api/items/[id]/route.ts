@@ -13,8 +13,17 @@ export async function GET(
   try {
     await dbConnect();
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const populateParent = searchParams.get('populateParent') === 'true';
 
-    const item = await ClothingItem.findById(id).lean();
+    let query = ClothingItem.findById(id);
+    
+    // Optionally populate parent item for edit forms
+    if (populateParent) {
+      query = query.populate('parentItem', 'name category subcategory');
+    }
+    
+    const item = await query.lean();
 
     if (!item) {
       return NextResponse.json(
