@@ -10,12 +10,13 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 // GET /api/items/:id/images - Get all images for an item
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const item = await ClothingItem.findById(params.id).lean();
+    const { id } = await params;
+    const item = await ClothingItem.findById(id).lean();
 
     if (!item) {
       return NextResponse.json(
@@ -40,13 +41,14 @@ export async function GET(
 // POST /api/items/:id/images - Add image to item
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     await ensureUploadDir();
 
-    const item = await ClothingItem.findById(params.id);
+    const { id } = await params;
+    const item = await ClothingItem.findById(id);
 
     if (!item) {
       return NextResponse.json(
@@ -126,7 +128,7 @@ export async function POST(
 // DELETE /api/items/:id/images - Delete an image from item
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
@@ -141,7 +143,8 @@ export async function DELETE(
       );
     }
 
-    const item = await ClothingItem.findById(params.id);
+    const { id } = await params;
+    const item = await ClothingItem.findById(id);
 
     if (!item) {
       return NextResponse.json(
@@ -187,7 +190,7 @@ export async function DELETE(
 // PATCH /api/items/:id/images - Update image metadata (caption, isPrimary)
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
@@ -202,7 +205,8 @@ export async function PATCH(
       );
     }
 
-    const item = await ClothingItem.findById(params.id);
+    const { id } = await params;
+    const item = await ClothingItem.findById(id);
 
     if (!item) {
       return NextResponse.json(

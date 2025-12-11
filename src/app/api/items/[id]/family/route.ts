@@ -5,12 +5,12 @@ import ClothingItem from '@/models/ClothingItem';
 // GET /api/items/:id/family - Get entire item family tree
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const itemId = params.id;
+    const { id: itemId } = await params;
 
     // Find the item
     const item = await ClothingItem.findById(itemId).lean();

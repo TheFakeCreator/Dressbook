@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { LoadingSpinner } from '@/components/ui/Loading';
@@ -30,7 +30,7 @@ const CATEGORIES = [
   'Accessories',
 ];
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   const [results, setResults] = useState<SearchResults | null>(null);
@@ -442,5 +442,13 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="flex h-96 items-center justify-center"><LoadingSpinner size="lg" /></div>}>
+      <SearchContent />
+    </Suspense>
   );
 }

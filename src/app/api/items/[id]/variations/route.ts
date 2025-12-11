@@ -5,12 +5,12 @@ import ClothingItem from '@/models/ClothingItem';
 // GET /api/items/:id/variations - Get all variations of an item
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const itemId = params.id;
+    const { id: itemId } = await params;
 
     // Find the item
     const item = await ClothingItem.findById(itemId).lean();
@@ -53,12 +53,12 @@ export async function GET(
 // POST /api/items/:id/variations - Create a new variation of an item
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const parentId = params.id;
+    const { id: parentId } = await params;
     const body = await req.json();
 
     // Find the parent item
