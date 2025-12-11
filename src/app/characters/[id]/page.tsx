@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/Loading';
 import { addToRecentlyViewed } from '@/lib/userActivity';
 import OutfitSuggestions from '@/components/outfits/OutfitSuggestions';
+import CostumeSheet from '@/components/characters/CostumeSheet';
 
 interface Character {
   _id: string;
@@ -40,11 +41,14 @@ export default function CharacterDetailPage() {
   const characterId = params.id as string;
 
   const [character, setCharacter] = useState<Character | null>(null);
+  const [timelineOutfits, setTimelineOutfits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCostumeSheet, setShowCostumeSheet] = useState(false);
 
   useEffect(() => {
     fetchCharacter();
+    fetchTimelineOutfits();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [characterId]);
 
@@ -68,6 +72,20 @@ export default function CharacterDetailPage() {
       setError(err instanceof Error ? err.message : 'Failed to load character');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTimelineOutfits = async () => {
+    try {
+      const response = await fetch(`/api/timeline?character=${characterId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setTimelineOutfits(data.data);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch timeline outfits:', err);
     }
   };
 
@@ -128,6 +146,15 @@ export default function CharacterDetailPage() {
             )}
           </div>
           <div className="flex gap-2">
+            <Button
+              variant={showCostumeSheet ? 'primary' : 'outline'}
+              onClick={() => setShowCostumeSheet(!showCostumeSheet)}
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {showCostumeSheet ? 'Hide' : 'Show'} Costume Sheet
+            </Button>
             <Link href={`/characters/${characterId}/edit`}>
               <Button variant="secondary">Edit</Button>
             </Link>
@@ -137,6 +164,10 @@ export default function CharacterDetailPage() {
           </div>
         </div>
 
+        {/* Costume Sheet View */}
+        {showCostumeSheet ? (
+          <CostumeSheet character={character} timelineOutfits={timelineOutfits} />
+        ) : (
         <div className="space-y-6">
           {/* Description */}
           {character.description && (
@@ -271,6 +302,7 @@ export default function CharacterDetailPage() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );
