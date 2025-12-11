@@ -8,6 +8,8 @@ import { Card } from '@/components/ui/Card';
 import { TimelineListSkeleton } from '@/components/LoadingSkeleton';
 import { NoTimelineEntries } from '@/components/EmptyState';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import { TimelineExport } from '@/components/timeline/TimelineExport';
+import { ConsistencyChecker } from '@/components/timeline/ConsistencyChecker';
 
 interface TimelineEntry {
   _id: string;
@@ -19,19 +21,24 @@ interface TimelineEntry {
   outfitId: {
     _id: string;
     name: string;
+    description?: string;
     items: Array<{
       itemId: {
         _id: string;
         name: string;
+        category: string;
         images?: Array<{ url: string; isPrimary?: boolean }>;
       };
+      layer: number;
     }>;
   };
   chapter?: string;
   scene?: string;
+  page?: number;
   location?: string;
   timeOfDay?: string;
   notes?: string;
+  context?: string;
   createdAt: string;
 }
 
@@ -53,6 +60,9 @@ export default function TimelinePage() {
   const [characterFilter, setCharacterFilter] = useState('');
   const [chapterFilter, setChapterFilter] = useState('');
   const [characters, setCharacters] = useState<Array<{ _id: string; name: string }>>([]);
+  const [showExport, setShowExport] = useState(false);
+  const [allEntries, setAllEntries] = useState<TimelineEntry[]>([]);
+  const [showConsistencyChecker, setShowConsistencyChecker] = useState(false);
 
   useEffect(() => {
     fetchCharacters();
@@ -104,6 +114,29 @@ export default function TimelinePage() {
     }
   };
 
+  const fetchAllEntriesForExport = async () => {
+    try {
+      const params = new URLSearchParams({
+        limit: '1000', // Get all entries
+      });
+
+      if (characterFilter) params.append('character', characterFilter);
+      if (chapterFilter) params.append('chapter', chapterFilter);
+
+      const response = await fetch(`/api/timeline?${params}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch all timeline entries');
+      }
+
+      const data = await response.json();
+      setAllEntries(data.entries || []);
+      setShowExport(true);
+    } catch (err) {
+      alert('Failed to load timeline entries for export');
+      console.error(err);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this timeline entry?')) {
       return;
@@ -142,12 +175,28 @@ export default function TimelinePage() {
               Track character outfits throughout your story
             </p>
           </div>
-          <Link href="/timeline/new">
-            <Button>
-              <span className="mr-2">+</span>
-              Add Timeline Entry
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setShowConsistencyChecker(!showConsistencyChecker)}
+            >
+              <span className="mr-2">🔍</span>
+              {showConsistencyChecker ? 'Hide Checker' : 'Check Consistency'}
             </Button>
-          </Link>
+            <Button
+              variant="secondary"
+              onClick={fetchAllEntriesForExport}
+            >
+              <span className="mr-2">📊</span>
+              Export Report
+            </Button>
+            <Link href="/timeline/new">
+              <Button>
+                <span className="mr-2">+</span>
+                Add Timeline Entry
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Filters */}
@@ -205,6 +254,23 @@ export default function TimelinePage() {
             </div>
           </div>
         </div>
+
+        {/* Export Component */}
+        {showExport && (
+          <div className="mb-6">
+            <TimelineExport
+              entries={allEntries}
+              title={`Timeline Report${characterFilter ? ` - ${characters.find(c => c._id === characterFilter)?.name || 'Character'}` : ''}${chapterFilter ? ` - ${chapterFilter}` : ''}`}
+            />
+          </div>
+        )}
+
+        {/* Consistency Checker */}
+        {showConsistencyChecker && (
+          <div className="mb-6">
+            <ConsistencyChecker />
+          </div>
+        )}
 
         {/* Loading State */}
         {loading && <TimelineListSkeleton count={5} />}
