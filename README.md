@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wardrobe Chronicle
 
-## Getting Started
+A comprehensive clothing database system for world-building and story writing. Track clothing items, create outfits, manage character appearances, and maintain visual references throughout your story's timeline.
 
-First, run the development server:
+## 🎯 Features
 
+- **Clothing Database**: Store clothing items with detailed attributes, images, and real-world historical references
+- **Outfit Builder**: Create modular outfit combinations from your clothing items
+- **Character Management**: Track characters and their wardrobe throughout your story
+- **Timeline Tracking**: Record what characters wore at specific points in your narrative
+- **Advanced Search**: Find items by category, tags, historical period, and more
+- **Image Management**: Upload and organize reference images for consistency
+
+## 📋 Real-World Reference Support
+
+Each clothing item can include:
+- Historical period (e.g., "1700-1800", "Victorian Era", "1920s")
+- Geographic origin (country/region)
+- Cultural context (who wore it, social class, occasions)
+- Historical description and notes
+- Reference sources (books, museums, websites)
+- Accuracy notes for historical authenticity
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ installed
+- MongoDB database (local or MongoDB Atlas)
+
+### Installation
+
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Set up environment variables:
+Create a `.env.local` file in the root directory:
+```env
+MONGODB_URI=mongodb://localhost:27017/wardrobe-chronicle
+# Or for MongoDB Atlas:
+# MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/wardrobe-chronicle
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Run the development server:
+```bash
+npm run dev
+```
 
-## Learn More
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-To learn more about Next.js, take a look at the following resources:
+## 🗄️ Database Setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Local MongoDB
+```bash
+# Install MongoDB locally or use Docker
+docker run -d -p 27017:27017 --name mongodb mongo:latest
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### MongoDB Atlas (Cloud)
+1. Create free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+2. Create a cluster
+3. Get connection string
+4. Add to `.env.local`
 
-## Deploy on Vercel
+## 📁 Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+wardrobe-chronicle/
+├── src/
+│   ├── app/                 # Next.js app router pages
+│   │   ├── api/            # API routes
+│   │   ├── items/          # Items pages
+│   │   └── page.tsx        # Dashboard
+│   ├── components/         # React components
+│   ├── lib/               # Utility functions
+│   ├── models/            # Mongoose models
+│   └── types/             # TypeScript types
+└── public/                # Static files
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: MongoDB with Mongoose ODM
+- **State Management**: React Query, Zustand
+- **Forms**: React Hook Form, Zod validation
+
+## 📖 API Documentation
+
+### Clothing Items
+
+```
+GET    /api/items              # List all items (paginated)
+POST   /api/items              # Create new item
+GET    /api/items/:id          # Get single item
+PUT    /api/items/:id          # Update item
+DELETE /api/items/:id          # Delete item
+```
+
+## 🗺️ Roadmap
+
+See `../IMPLEMENTATION_ROADMAP.md` for detailed development plan.
+
+- [x] Phase 0: Project Setup
+- [x] Phase 1: Core Data Layer (In Progress)
+- [ ] Phase 2: Image Management
+- [ ] Phase 3-11: UI, Features, Deployment
+
+## 📄 Documentation
+
+- [MVP Plan](../MVP_PLAN.md)
+- [Implementation Roadmap](../IMPLEMENTATION_ROADMAP.md)
+- [Tech Stack Details](../TECH_STACK.md)
+
+---
+
+**Current Status**: Phase 1 - Core Data Layer (In Progress)
